@@ -1,0 +1,11 @@
+{
+  "configurations": [
+    {
+      "name": "CUDA C++: Launch",
+      "type": "cuda-gdb",
+      "request": "launch",
+      "program": "${workspaceFolder}/matrixMulMine",
+      "args": "-wA=32 -hA=32 -hB=32"
+    }
+  ]
+}

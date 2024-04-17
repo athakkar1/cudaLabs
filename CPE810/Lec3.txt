@@ -1,0 +1,34 @@
+A thread is one instance of the code being executed in parallel. These threads (made up of the instructions in your code) are grouped into blocks, each block running on one
+SM (Streaming MultiProcessor) in the GPU, and the SM is made up of Streaming Processors which handle one thread in the block. Then these blocks are organized into a grid, also known 
+as the kernel. This kernel is a function ran on the GPU. The block grid structure allows for indexing
+to different points in an array at the same time, and the grid allows for multiple processors to do the same task in parallel.
+
+SP can only execute one thread, it can be thought of as a simple Von-Neumann Processor. SM is the group of these SPs which allows for SIMD execution, 
+and the SM has multiple computational units (SPs) and shared memory, program counter, I/O, etc.
+
+Memory transfer on GPU is slow as fuck, its not made for that like the CPU is. But computation is its strong suit unlike the CPU.
+
+Global Memory: Common to all streaming multiprocessors, far and slow to retrieve from
+Shared memory: Common to all streaming processors within SM, which is fast and close
+
+Block is split up into 32-thread warps, and these partitioned warps are used as scheduling units in SM. SM will schedule which warps in the block to execute first in SIMD on the SPs.
+Basically SPs will concurrently execute one warp at a time to complete a block, and which warps to schedule is dictated by SM. If there are 32 threads in a warp and only 8 SPs, it will
+take 32/8 = 4 clock cycles to execute the warp.
+
+Each SP has their own registers which is useful for storing things like indexes which are unique to their thread. Shared memory good for communicating between threads on same SM.
+
+One way to circumvent global memory access is to load once into shared memory, and have multiple threads use this loaded value for their computation.
+For example, in matrix multiplication each thread would have to load in a value from each matrix, then store this in the result matrix index. This is three memory accesses.
+However if you load in a row to shared memory, multiple threads can use these values and reduce their memory accesses making it faster.
+
+Tiling memory algorithms put data in shared memory that will be useful to multiple threads. Its like carpooling, where carpooling is efficient but the people need to have
+the same schedule to be able to carpool. Similarly, threads must be working on similar tasks to be able to use the same data.
+
+You must have barrier synchronization, or basically make sure all threads complete their tasks before you load in new memory to the shared memory.
+
+Block size is same size as the tile. For matrix multiplication, you basically split up your two big matrices into sizes of your block, and load this block into shared memory for the
+SM. Then after loading this block, each thread can access this shared memory block to compute a partial matrix multiplication, since the block does not contain the full row/column of the
+two matrices you are multiplying. So, you use a phase index to make sure only after all phases do you load the final matrix multiplication result into the result matrix.
+
+Having more thread blocks is good because you can load in one block while other blocks compute like pipelining, but having too many thread blocks with small tile sizes is bad because
+of warp size. If your tile size is too small, you might have less threads than the warp size and therefore some threads are idle, meaning you aren't using your processor efficiently.
